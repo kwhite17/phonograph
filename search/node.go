@@ -1,6 +1,11 @@
 package search
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/kwhite17/phonograph/client"
+	"github.com/kwhite17/phonograph/model"
+)
 
 type Node interface {
 	expand(edges []Node) []Node
@@ -18,11 +23,13 @@ type Node interface {
 type ArtistNode struct {
 	child           *ArtistNode
 	parent          *ArtistNode
-	value           string
+	value           model.Artist
 	foundAncestors  bool
 	foundSuccessors bool
 	lock            *sync.Mutex
 }
+
+var sClient = client.InitSpotifyClient()
 
 type NumberNode struct {
 	child           *NumberNode
@@ -77,17 +84,12 @@ func (an *ArtistNode) hasFoundSuccessors() bool {
 
 func (an *ArtistNode) expand(edges []Node) []Node {
 	//convertEdges to songs
-	songEdges := make([]Node, 0)
-	for i := 0; i < len(edges); i++ {
-		songEdges = append(songEdges, edges[i].(Node))
+	collaborators := sClient.GetAssociatedArtists(an.value)
+	artistNodes := make([]Node, 0)
+	for _, artist := range collaborators {
+		artistNodes = append(artistNodes, &ArtistNode{value: artist})
 	}
-	//get artists from songs
-	// artistEdges := make([]Node, 0)
-	for i := 0; i < len(songEdges); i++ {
-		//get artists from songs (except current artist)
-		continue
-	}
-	return nil
+	return artistNodes
 }
 
 func (an *ArtistNode) getLock() *sync.Mutex {
