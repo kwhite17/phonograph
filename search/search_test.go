@@ -7,7 +7,7 @@ var nodeList = make([]Node, 0)
 
 func buildTestGraph() map[Node][]Node {
 	for i := 0; i < 12; i++ {
-		nodeList = append(nodeList, &NumberNode{value: i})
+		nodeList = append(nodeList, &NumberNode{Value: i})
 	}
 	graph := make(map[Node][]Node)
 	graph[nodeList[0]] = []Node{nodeList[1], nodeList[2]}
@@ -97,7 +97,7 @@ func TestBasicBidirectionalSearch(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
 	dest := nodeList[1]
-	result := bidirectionalBfs(source, dest, graph)
+	result := BidirectionalBfs(source, dest, graph)
 	if result.Len() != 2 {
 		t.Errorf("Expected result of length 2. Actual result length is %d", result.Len())
 	}
@@ -107,7 +107,7 @@ func TestGrandparentBidirectionalSearch(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
 	dest := nodeList[7]
-	result := bidirectionalBfs(source, dest, graph)
+	result := BidirectionalBfs(source, dest, graph)
 	if result.Len() != 3 {
 		t.Errorf("Expected result of length 3. Actual result length is %d", result.Len())
 	}
@@ -116,7 +116,7 @@ func TestGrandparentBidirectionalSearch(t *testing.T) {
 func TestBidirectionalNilSource(t *testing.T) {
 	defer teardown()
 	dest := nodeList[0]
-	result := bidirectionalBfs(nil, dest, graph)
+	result := BidirectionalBfs(nil, dest, graph)
 	if result.Len() != 0 {
 		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
 	}
@@ -125,7 +125,7 @@ func TestBidirectionalNilSource(t *testing.T) {
 func TestBidirectionalNilDestination(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
-	result := bidirectionalBfs(source, nil, graph)
+	result := BidirectionalBfs(source, nil, graph)
 	if result.Len() != 0 {
 		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
 	}
@@ -135,7 +135,7 @@ func TestBidirectionalMultipleShortestPaths(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
 	dest := nodeList[11]
-	result := bidirectionalBfs(source, dest, graph)
+	result := BidirectionalBfs(source, dest, graph)
 	if result.Len() != 5 {
 		t.Errorf("Expected result of length 5. Actual result length is %d", result.Len())
 	}

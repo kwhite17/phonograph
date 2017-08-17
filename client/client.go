@@ -26,6 +26,9 @@ func InitSpotifyClient() *SpotifyClient {
 	return &SpotifyClient{client: &http.Client{}}
 }
 
+//TODO: Extract URL Building into testable method
+//TODO: Extract Parser functionality into testable methods
+
 func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 	endpoint := fmt.Sprintf("%s://%s/search?type=artist&q=%s", sClient.protocol, sClient.baseUrl, name)
 	resp, err := sClient.client.Get(endpoint)

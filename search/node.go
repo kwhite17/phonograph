@@ -23,7 +23,7 @@ type Node interface {
 type ArtistNode struct {
 	child           *ArtistNode
 	parent          *ArtistNode
-	value           model.Artist
+	Value           model.Artist
 	foundAncestors  bool
 	foundSuccessors bool
 	lock            *sync.Mutex
@@ -34,7 +34,7 @@ var sClient = client.InitSpotifyClient()
 type NumberNode struct {
 	child           *NumberNode
 	parent          *NumberNode
-	value           int
+	Value           int
 	foundAncestors  bool
 	foundSuccessors bool
 	lock            *sync.Mutex
@@ -49,7 +49,7 @@ func (an *ArtistNode) getParent() Node {
 }
 
 func (an *ArtistNode) setParent(parent Node) {
-	if !isNil(parent) {
+	if !IsNil(parent) {
 		node := parent.(*ArtistNode)
 		an.parent = node
 	} else {
@@ -58,7 +58,7 @@ func (an *ArtistNode) setParent(parent Node) {
 }
 
 func (an *ArtistNode) setChild(child Node) {
-	if !isNil(child) {
+	if !IsNil(child) {
 		node := child.(*ArtistNode)
 		an.child = node
 	} else {
@@ -84,16 +84,16 @@ func (an *ArtistNode) hasFoundSuccessors() bool {
 
 func (an *ArtistNode) expand(edges []Node) []Node {
 	//convertEdges to songs
-	collaborators := sClient.GetAssociatedArtists(an.value)
+	collaborators := sClient.GetAssociatedArtists(an.Value)
 	artistNodes := make([]Node, 0)
 	for _, artist := range collaborators {
-		artistNodes = append(artistNodes, &ArtistNode{value: artist})
+		artistNodes = append(artistNodes, &ArtistNode{Value: artist})
 	}
 	return artistNodes
 }
 
 func (an *ArtistNode) getLock() *sync.Mutex {
-	if isNil(an.lock) {
+	if IsNil(an.lock) {
 		an.lock = &sync.Mutex{}
 	}
 	return an.lock
@@ -108,7 +108,7 @@ func (nn *NumberNode) getParent() Node {
 }
 
 func (nn *NumberNode) setParent(parent Node) {
-	if !isNil(parent) {
+	if !IsNil(parent) {
 		node := parent.(*NumberNode)
 		nn.parent = node
 	} else {
@@ -117,7 +117,7 @@ func (nn *NumberNode) setParent(parent Node) {
 }
 
 func (nn *NumberNode) setChild(child Node) {
-	if !isNil(child) {
+	if !IsNil(child) {
 		node := child.(*NumberNode)
 		nn.child = node
 	} else {
@@ -126,7 +126,7 @@ func (nn *NumberNode) setChild(child Node) {
 }
 
 func (nn *NumberNode) getLock() *sync.Mutex {
-	if isNil(nn.lock) {
+	if IsNil(nn.lock) {
 		nn.lock = &sync.Mutex{}
 	}
 	return nn.lock
@@ -157,5 +157,5 @@ func (nn *NumberNode) expand(edges []Node) []Node {
 }
 
 func (nn *NumberNode) string() string {
-	return string(nn.value)
+	return string(nn.Value)
 }

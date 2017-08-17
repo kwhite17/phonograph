@@ -5,7 +5,9 @@ import (
 	"reflect"
 )
 
-func bidirectionalBfs(source Node, dest Node, graph map[Node][]Node) *list.List {
+//TODO: MAKE GRAPHS A CLIENT INTERFACE THAT IMPLEMENTS EXPAND
+
+func BidirectionalBfs(source Node, dest Node, graph map[Node][]Node) *list.List {
 	resultChan := make(chan Node)
 	go bidirectionalBfsHelper(source, dest, resultChan, graph, true)
 	go bidirectionalBfsHelper(dest, source, resultChan, graph, false)
@@ -23,7 +25,7 @@ func bidirectionalBfs(source Node, dest Node, graph map[Node][]Node) *list.List 
 }
 
 func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[Node][]Node, isSource bool) {
-	if !isNil(start) {
+	if !IsNil(start) {
 		queue := list.New()
 		queue.PushBack(start)
 		for queue.Len() != 0 {
@@ -46,21 +48,21 @@ func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[No
 					cur := nextElements[i]
 					cur.getLock().Lock()
 					if isSource {
-						if isNil(cur.getParent()) && !cur.hasFoundSuccessors() && cur != start {
+						if IsNil(cur.getParent()) && !cur.hasFoundSuccessors() && cur != start {
 							cur.setParent(element)
 						}
 						if !cur.hasFoundSuccessors() {
 							queue.PushBack(cur)
 						}
 					} else {
-						if isNil(cur.getChild()) && !cur.hasFoundAncestors() && cur != start {
+						if IsNil(cur.getChild()) && !cur.hasFoundAncestors() && cur != start {
 							cur.setChild(element)
 						}
 						if !cur.hasFoundAncestors() {
 							queue.PushBack(cur)
 						}
 					}
-					if !isNil(cur.getParent()) && !isNil(cur.getChild()) {
+					if !IsNil(cur.getParent()) && !IsNil(cur.getChild()) {
 						resultChan <- cur
 						cur.getLock().Unlock()
 						return
@@ -80,16 +82,16 @@ func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[No
 
 func organizeResult(commonNode Node, source Node, dest Node) *list.List {
 	finalList := list.New()
-	if isNil(commonNode) {
+	if IsNil(commonNode) {
 		return finalList
 	}
 	curNode := commonNode
-	for !isNil(curNode) {
+	for !IsNil(curNode) {
 		finalList.PushFront(curNode)
 		curNode = curNode.getParent()
 	}
 	curNode = commonNode.getChild()
-	for !isNil(curNode) {
+	for !IsNil(curNode) {
 		finalList.PushBack(curNode)
 		curNode = curNode.getChild()
 	}
@@ -100,7 +102,7 @@ func bfs(source Node, dest Node, graph map[Node][]Node) *list.List {
 	result := list.New()
 	if bfsHelper(source, dest, graph) {
 		cur := dest
-		for !isNil(cur) {
+		for !IsNil(cur) {
 			result.PushFront(cur)
 			cur = cur.getParent()
 		}
@@ -109,10 +111,10 @@ func bfs(source Node, dest Node, graph map[Node][]Node) *list.List {
 }
 
 func bfsHelper(source Node, dest Node, graph map[Node][]Node) bool {
-	if isNil(source) {
+	if IsNil(source) {
 		return false
 	}
-	if isNil(dest) {
+	if IsNil(dest) {
 		return false
 	}
 	queue := list.New()
@@ -121,14 +123,14 @@ func bfsHelper(source Node, dest Node, graph map[Node][]Node) bool {
 		element := queue.Remove(queue.Front()).(Node)
 		element.setFoundSuccessors(true)
 		nextElements := make([]Node, 0)
-		if !isNil(graph) {
+		if !IsNil(graph) {
 			nextElements = element.expand(graph[element])
 		} else {
 			nextElements = element.expand(nil)
 		}
 		for i := 0; i < len(nextElements); i++ {
 			cur := nextElements[i]
-			if isNil(cur.getParent()) && !cur.hasFoundSuccessors() {
+			if IsNil(cur.getParent()) && !cur.hasFoundSuccessors() {
 				cur.setParent(element)
 				if cur == dest {
 					return true
@@ -140,7 +142,7 @@ func bfsHelper(source Node, dest Node, graph map[Node][]Node) bool {
 	return false
 }
 
-func isNil(a interface{}) bool {
+func IsNil(a interface{}) bool {
 	defer func() { recover() }()
 	return a == nil || reflect.ValueOf(a).IsNil()
 }
