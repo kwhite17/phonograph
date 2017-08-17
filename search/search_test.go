@@ -38,9 +38,18 @@ func teardown() {
 func TestBasicSearch(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
+	dest := nodeList[1]
+	result := bfs(source, dest, graph)
+	if result.Len() != 2 {
+		t.Errorf("Expected result of length 2. Actual result length is %d", result.Len())
+	}
+}
+
+func TestGrandparentSearch(t *testing.T) {
+	defer teardown()
+	source := nodeList[0]
 	dest := nodeList[7]
 	result := bfs(source, dest, graph)
-	// fmt.Println(result)
 	if result.Len() != 3 {
 		t.Errorf("Expected result of length 3. Actual result length is %d", result.Len())
 	}
@@ -87,9 +96,18 @@ func TestMultipleShortestPaths(t *testing.T) {
 func TestBasicBidirectionalSearch(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
+	dest := nodeList[1]
+	result := bidirectionalBfs(source, dest, graph)
+	if result.Len() != 2 {
+		t.Errorf("Expected result of length 2. Actual result length is %d", result.Len())
+	}
+}
+
+func TestGrandparentBidirectionalSearch(t *testing.T) {
+	defer teardown()
+	source := nodeList[0]
 	dest := nodeList[7]
 	result := bidirectionalBfs(source, dest, graph)
-	// fmt.Println(result)
 	if result.Len() != 3 {
 		t.Errorf("Expected result of length 3. Actual result length is %d", result.Len())
 	}

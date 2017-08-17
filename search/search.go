@@ -67,6 +67,11 @@ func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[No
 					}
 					cur.getLock().Unlock()
 				}
+			} else {
+				element.getLock().Lock()
+				resultChan <- element
+				element.getLock().Unlock()
+				return
 			}
 		}
 	}
