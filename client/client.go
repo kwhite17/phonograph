@@ -30,7 +30,7 @@ func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 	endpoint := fmt.Sprintf("%s://%s/search?type=artist&q=%s", sClient.protocol, sClient.baseUrl, name)
 	resp, err := sClient.client.Get(endpoint)
 	if err != nil {
-		fmt.Errorf("GetArtist Error: %v", err)
+		log.Println(fmt.Errorf("GetArtist Error: %v", err))
 		return model.Artist{}
 	}
 	artist := model.Artist{}
@@ -38,7 +38,7 @@ func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 	parser = parser.GetPath("artists", "items").GetIndex(0)
 	data, err := parser.Bytes()
 	if err != nil {
-		fmt.Errorf("GetArtist Error: %v", err)
+		log.Println(fmt.Errorf("GetArtist Error: %v", err))
 		return model.Artist{}
 	}
 	json.Unmarshal(data, artist)
