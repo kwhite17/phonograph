@@ -2,15 +2,17 @@ package search
 
 import (
 	"container/list"
-	"reflect"
+
+	"github.com/kwhite17/phonograph/client"
+	"github.com/kwhite17/phonograph/model"
 )
 
 //TODO: MAKE GRAPHS A CLIENT INTERFACE THAT IMPLEMENTS EXPAND
 
-func BidirectionalBfs(source Node, dest Node, graph map[Node][]Node) *list.List {
-	resultChan := make(chan Node)
-	go bidirectionalBfsHelper(source, dest, resultChan, graph, true)
-	go bidirectionalBfsHelper(dest, source, resultChan, graph, false)
+func BidirectionalBfs(source model.Node, dest model.Node, cli client.Client) *list.List {
+	resultChan := make(chan model.Node)
+	go bidirectionalBfsHelper(source, dest, resultChan, cli, true)
+	go bidirectionalBfsHelper(dest, source, resultChan, cli, false)
 	result := list.New()
 	for i := 0; i < 2; i++ {
 		commonNode := <-resultChan
@@ -24,55 +26,50 @@ func BidirectionalBfs(source Node, dest Node, graph map[Node][]Node) *list.List 
 	return result
 }
 
-func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[Node][]Node, isSource bool) {
-	if !IsNil(start) {
+func bidirectionalBfsHelper(start model.Node, end model.Node, resultChan chan model.Node, cli client.Client, isSource bool) {
+	if !model.IsNil(start) && !model.IsNil(end) {
 		queue := list.New()
 		queue.PushBack(start)
 		for queue.Len() != 0 {
-			element := queue.Remove(queue.Front()).(Node)
+			element := queue.Remove(queue.Front()).(model.Node)
 			if element != end {
-				nextElements := make([]Node, 0)
-				element.getLock().Lock()
+				element.GetLock().Lock()
 				if isSource {
-					element.setFoundSuccessors(true)
+					element.SetFoundSuccessors(true)
 				} else {
-					element.setFoundAncestors(true)
+					element.SetFoundAncestors(true)
 				}
-				if g != nil {
-					nextElements = element.expand(g[element])
-				} else {
-					nextElements = element.expand(nil)
-				}
-				element.getLock().Unlock()
+				nextElements := cli.Expand(element)
+				element.GetLock().Unlock()
 				for i := 0; i < len(nextElements); i++ {
 					cur := nextElements[i]
-					cur.getLock().Lock()
+					cur.GetLock().Lock()
 					if isSource {
-						if IsNil(cur.getParent()) && !cur.hasFoundSuccessors() && cur != start {
-							cur.setParent(element)
+						if model.IsNil(cur.GetParent()) && !cur.HasFoundSuccessors() && cur != start {
+							cur.SetParent(element)
 						}
-						if !cur.hasFoundSuccessors() {
+						if !cur.HasFoundSuccessors() {
 							queue.PushBack(cur)
 						}
 					} else {
-						if IsNil(cur.getChild()) && !cur.hasFoundAncestors() && cur != start {
-							cur.setChild(element)
+						if model.IsNil(cur.GetChild()) && !cur.HasFoundSuccessors() && cur != start {
+							cur.SetChild(element)
 						}
-						if !cur.hasFoundAncestors() {
+						if !cur.HasFoundSuccessors() {
 							queue.PushBack(cur)
 						}
 					}
-					if !IsNil(cur.getParent()) && !IsNil(cur.getChild()) {
+					if !model.IsNil(cur.GetParent()) && !model.IsNil(cur.GetChild()) {
 						resultChan <- cur
-						cur.getLock().Unlock()
+						cur.GetLock().Unlock()
 						return
 					}
-					cur.getLock().Unlock()
+					cur.GetLock().Unlock()
 				}
 			} else {
-				element.getLock().Lock()
+				element.GetLock().Lock()
 				resultChan <- element
-				element.getLock().Unlock()
+				element.GetLock().Unlock()
 				return
 			}
 		}
@@ -80,58 +77,53 @@ func bidirectionalBfsHelper(start Node, end Node, resultChan chan Node, g map[No
 	resultChan <- nil
 }
 
-func organizeResult(commonNode Node, source Node, dest Node) *list.List {
+func organizeResult(commonNode model.Node, source model.Node, dest model.Node) *list.List {
 	finalList := list.New()
-	if IsNil(commonNode) {
+	if model.IsNil(commonNode) {
 		return finalList
 	}
 	curNode := commonNode
-	for !IsNil(curNode) {
+	for !model.IsNil(curNode) {
 		finalList.PushFront(curNode)
-		curNode = curNode.getParent()
+		curNode = curNode.GetParent()
 	}
-	curNode = commonNode.getChild()
-	for !IsNil(curNode) {
+	curNode = commonNode.GetChild()
+	for !model.IsNil(curNode) {
 		finalList.PushBack(curNode)
-		curNode = curNode.getChild()
+		curNode = curNode.GetChild()
 	}
 	return finalList
 }
 
-func bfs(source Node, dest Node, graph map[Node][]Node) *list.List {
+func bfs(source model.Node, dest model.Node, cli client.Client) *list.List {
 	result := list.New()
-	if bfsHelper(source, dest, graph) {
+	if bfsHelper(source, dest, cli) {
 		cur := dest
-		for !IsNil(cur) {
+		for !model.IsNil(cur) {
 			result.PushFront(cur)
-			cur = cur.getParent()
+			cur = cur.GetParent()
 		}
 	}
 	return result
 }
 
-func bfsHelper(source Node, dest Node, graph map[Node][]Node) bool {
-	if IsNil(source) {
+func bfsHelper(source model.Node, dest model.Node, cli client.Client) bool {
+	if model.IsNil(source) {
 		return false
 	}
-	if IsNil(dest) {
+	if model.IsNil(dest) {
 		return false
 	}
 	queue := list.New()
 	queue.PushBack(source)
 	for queue.Len() != 0 {
-		element := queue.Remove(queue.Front()).(Node)
-		element.setFoundSuccessors(true)
-		nextElements := make([]Node, 0)
-		if !IsNil(graph) {
-			nextElements = element.expand(graph[element])
-		} else {
-			nextElements = element.expand(nil)
-		}
+		element := queue.Remove(queue.Front()).(model.Node)
+		element.SetFoundSuccessors(true)
+		nextElements := cli.Expand(element)
 		for i := 0; i < len(nextElements); i++ {
 			cur := nextElements[i]
-			if IsNil(cur.getParent()) && !cur.hasFoundSuccessors() {
-				cur.setParent(element)
+			if model.IsNil(cur.GetParent()) && !cur.HasFoundSuccessors() {
+				cur.SetParent(element)
 				if cur == dest {
 					return true
 				}
@@ -140,9 +132,4 @@ func bfsHelper(source Node, dest Node, graph map[Node][]Node) bool {
 		}
 	}
 	return false
-}
-
-func IsNil(a interface{}) bool {
-	defer func() { recover() }()
-	return a == nil || reflect.ValueOf(a).IsNil()
 }
