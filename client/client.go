@@ -12,7 +12,7 @@ import (
 )
 
 type Client interface {
-	FindArtist(name string) model.Artist
+	Expand(value model.Node) []model.Node
 }
 
 type SpotifyClient struct {
@@ -22,8 +22,7 @@ type SpotifyClient struct {
 	auth     string
 }
 
-//TODO: Obtain auth key for client
-
+//TODO: Get Dev Key for Spotify
 func InitSpotifyClient() *SpotifyClient {
 	return &SpotifyClient{client: &http.Client{}, baseUrl: "api.spotify.com/v1", protocol: "https"}
 }
@@ -70,7 +69,7 @@ func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
 	return albumIds
 }
 
-func (sClient *SpotifyClient) GetAssociatedArtists(artist model.Artist) []model.Artist {
+func (sClient *SpotifyClient) getAssociatedArtists(artist model.Artist) []model.Artist {
 	albumIds := sClient.getArtistAlbums(artist)
 	albumsEndpoint := sClient.buildUrl("albums", map[string]interface{}{"ids": albumIds[0]})
 	for i := 1; i < len(albumIds); i++ {
@@ -145,4 +144,27 @@ func (sClient *SpotifyClient) buildUrl(endpoint string, params map[string]interf
 		resource = resource + paramString
 	}
 	return resource
+}
+
+func (sCli SpotifyClient) Expand(parent model.Node) []model.Node {
+	artist := parent.GetValue().(model.Artist)
+	associatedArtists := sCli.getAssociatedArtists(artist)
+	result := make([]model.Node, len(associatedArtists))
+	for k, v := range associatedArtists {
+		result[k] = &model.ArtistNode{Value: v}
+	}
+	return result
+}
+
+type GraphClient struct {
+	Graph map[interface{}][]interface{}
+}
+
+func (gCli GraphClient) Expand(parent model.Node) []model.Node {
+	descendants := gCli.Graph[parent]
+	nodes := make([]model.Node, len(descendants))
+	for k, v := range descendants {
+		nodes[k] = v.(*model.GenericNode)
+	}
+	return nodes
 }

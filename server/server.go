@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kwhite17/phonograph/client"
+	"github.com/kwhite17/phonograph/model"
 	"github.com/kwhite17/phonograph/search"
 )
 
@@ -23,8 +24,8 @@ func (sh spotifySearchHandler) ServeHTTP(writer http.ResponseWriter, request *ht
 		writer.WriteHeader(http.StatusBadRequest)
 		writer.Write(nil)
 	}
-	artistNode := &search.ArtistNode{Value: artist}
-	candidateNode := &search.ArtistNode{Value: candidate}
+	artistNode := &model.ArtistNode{Value: artist}
+	candidateNode := &model.ArtistNode{Value: candidate}
 	result := search.BidirectionalBfs(artistNode, candidateNode, nil)
 	jsonResult, err := json.Marshal(result)
 	if err != nil {

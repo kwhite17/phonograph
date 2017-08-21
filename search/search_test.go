@@ -1,37 +1,42 @@
 package search
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/kwhite17/phonograph/client"
+	"github.com/kwhite17/phonograph/model"
+)
 
 var graph = buildTestGraph()
-var nodeList = make([]Node, 0)
+var nodeList = make([]model.Node, 0)
 
-func buildTestGraph() map[Node][]Node {
+func buildTestGraph() client.GraphClient {
 	for i := 0; i < 12; i++ {
-		nodeList = append(nodeList, &NumberNode{Value: i})
+		nodeList = append(nodeList, &model.GenericNode{Value: i})
 	}
-	graph := make(map[Node][]Node)
-	graph[nodeList[0]] = []Node{nodeList[1], nodeList[2]}
-	graph[nodeList[1]] = []Node{nodeList[0], nodeList[4]}
-	graph[nodeList[2]] = []Node{nodeList[0], nodeList[3], nodeList[7]}
-	graph[nodeList[3]] = []Node{nodeList[2], nodeList[7]}
-	graph[nodeList[4]] = []Node{nodeList[1], nodeList[5], nodeList[6], nodeList[9]}
-	graph[nodeList[5]] = []Node{nodeList[4], nodeList[11]}
-	graph[nodeList[6]] = []Node{nodeList[4], nodeList[11]}
-	graph[nodeList[7]] = []Node{nodeList[2], nodeList[3], nodeList[8]}
-	graph[nodeList[8]] = []Node{nodeList[7]}
-	graph[nodeList[9]] = []Node{nodeList[4]}
-	graph[nodeList[10]] = []Node{}
-	graph[nodeList[11]] = []Node{nodeList[5], nodeList[6]}
-
-	return graph
+	graph := make(map[interface{}][]interface{})
+	graph[nodeList[0]] = []interface{}{nodeList[1], nodeList[2]}
+	graph[nodeList[1]] = []interface{}{nodeList[0], nodeList[4]}
+	graph[nodeList[2]] = []interface{}{nodeList[0], nodeList[3], nodeList[7]}
+	graph[nodeList[3]] = []interface{}{nodeList[2], nodeList[7]}
+	graph[nodeList[4]] = []interface{}{nodeList[1], nodeList[5], nodeList[6], nodeList[9]}
+	graph[nodeList[5]] = []interface{}{nodeList[4], nodeList[11]}
+	graph[nodeList[6]] = []interface{}{nodeList[4], nodeList[11]}
+	graph[nodeList[7]] = []interface{}{nodeList[2], nodeList[3], nodeList[8]}
+	graph[nodeList[8]] = []interface{}{nodeList[7]}
+	graph[nodeList[9]] = []interface{}{nodeList[4]}
+	graph[nodeList[10]] = []interface{}{}
+	graph[nodeList[11]] = []interface{}{nodeList[5], nodeList[6]}
+	gCli := client.GraphClient{Graph: graph}
+	return gCli
 }
 
 func teardown() {
 	for _, node := range nodeList {
-		node.setFoundAncestors(false)
-		node.setFoundSuccessors(false)
-		node.setChild(nil)
-		node.setParent(nil)
+		node.SetFoundAncestors(false)
+		node.SetFoundSuccessors(false)
+		node.SetChild(nil)
+		node.SetParent(nil)
 	}
 }
 
