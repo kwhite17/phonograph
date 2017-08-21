@@ -22,15 +22,16 @@ type SpotifyClient struct {
 	auth     string
 }
 
+//TODO: Obtain auth key for client
+
 func InitSpotifyClient() *SpotifyClient {
-	return &SpotifyClient{client: &http.Client{}}
+	return &SpotifyClient{client: &http.Client{}, baseUrl: "api.spotify.com/v1", protocol: "https"}
 }
 
-//TODO: Extract URL Building into testable method
 //TODO: Extract Parser functionality into testable methods
 
 func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
-	endpoint := fmt.Sprintf("%s://%s/search?type=artist&q=%s", sClient.protocol, sClient.baseUrl, name)
+	endpoint := sClient.buildUrl("search", map[string]interface{}{"type": "artist", "q": "name"})
 	resp, err := sClient.client.Get(endpoint)
 	if err != nil {
 		log.Println(fmt.Errorf("GetArtist Error: %v", err))
@@ -49,7 +50,7 @@ func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 }
 
 func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
-	albumEndpoint := fmt.Sprintf("%s://%s/artists/%s/albums", sClient.protocol, sClient.baseUrl, artist.ID)
+	albumEndpoint := sClient.buildUrl(fmt.Sprintf("artists/%s/albums", artist.ID), nil)
 	albumResponse, err := sClient.client.Get(albumEndpoint)
 	if err != nil {
 		log.Println(fmt.Errorf("GetAssociatedArtists Error - Album Request Error: %v", err))
@@ -71,7 +72,7 @@ func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
 
 func (sClient *SpotifyClient) GetAssociatedArtists(artist model.Artist) []model.Artist {
 	albumIds := sClient.getArtistAlbums(artist)
-	albumsEndpoint := fmt.Sprintf("%s://%s/albums/?ids=%s", sClient.protocol, sClient.baseUrl, albumIds[0])
+	albumsEndpoint := sClient.buildUrl("albums", map[string]interface{}{"ids": albumIds[0]})
 	for i := 1; i < len(albumIds); i++ {
 		albumsEndpoint = fmt.Sprintf("%s,%s", albumsEndpoint, albumIds[i])
 	}
@@ -128,4 +129,20 @@ func (sClient *SpotifyClient) GetAssociatedArtists(artist model.Artist) []model.
 		}
 	}
 	return associatedArtists
+}
+
+func (sClient *SpotifyClient) buildUrl(endpoint string, params map[string]interface{}) string {
+	resource := fmt.Sprintf("%s://%s/%s", sClient.protocol, sClient.baseUrl, endpoint)
+	if params != nil {
+		paramString := "?"
+		for k, v := range params {
+			if paramString == "?" {
+				paramString = fmt.Sprintf("%s%s=%v", paramString, k, v)
+			} else {
+				paramString = fmt.Sprintf("%s&%s=%v", paramString, k, v)
+			}
+		}
+		resource = resource + paramString
+	}
+	return resource
 }
