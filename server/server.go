@@ -9,18 +9,18 @@ import (
 	"github.com/kwhite17/phonograph/search"
 )
 
-type spotifySearchHandler struct{}
+type SpotifySearchHandler struct{}
 
-func (sh spotifySearchHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (sh SpotifySearchHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	params := request.URL.Query()
 	sCli := client.InitSpotifyClient()
 	artist := sCli.FindArtist(params.Get("artist"))
-	if search.IsNil(artist) {
+	if model.IsNil(artist) {
 		writer.WriteHeader(http.StatusBadRequest)
 		writer.Write(nil)
 	}
 	candidate := sCli.FindArtist(params.Get("candidate"))
-	if search.IsNil(candidate) {
+	if model.IsNil(candidate) {
 		writer.WriteHeader(http.StatusBadRequest)
 		writer.Write(nil)
 	}

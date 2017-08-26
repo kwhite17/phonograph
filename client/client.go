@@ -23,6 +23,7 @@ type SpotifyClient struct {
 }
 
 //TODO: Get Dev Key for Spotify
+
 func InitSpotifyClient() *SpotifyClient {
 	return &SpotifyClient{client: &http.Client{}, baseUrl: "api.spotify.com/v1", protocol: "https"}
 }
@@ -36,15 +37,28 @@ func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 		log.Println(fmt.Errorf("GetArtist Error: %v", err))
 		return model.Artist{}
 	}
-	artist := model.Artist{}
 	parser, err := simplejson.NewFromReader(resp.Body)
-	parser = parser.GetPath("artists", "items").GetIndex(0)
-	data, err := parser.Bytes()
 	if err != nil {
-		log.Println(fmt.Errorf("GetArtist Error: %v", err))
+		log.Println(fmt.Errorf("GetArtist Error - Read JSON: %v", err))
 		return model.Artist{}
 	}
-	json.Unmarshal(data, artist)
+	return sClient.parseArtistFromJson(parser)
+}
+
+func (sClient *SpotifyClient) parseArtistFromJson(parser *simplejson.Json) model.Artist {
+	artist := model.Artist{}
+	parser = parser.GetPath("artists", "items").GetIndex(0)
+	data, err := parser.Map()
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		log.Println(fmt.Errorf("GetArtist Error - Marshal:  %v", err))
+		return model.Artist{}
+	}
+	err = json.Unmarshal(bytes, &artist)
+	if err != nil {
+		log.Println(fmt.Errorf("GetArtist Error - Unmarshal: %v", err))
+		return model.Artist{}
+	}
 	return artist
 }
 
@@ -80,14 +94,16 @@ func (sClient *SpotifyClient) getAssociatedArtists(artist model.Artist) []model.
 		log.Println(fmt.Errorf("GetAssociatedArtists - Albums Request Error: %v", err))
 		return nil
 	}
-
 	albumsParser, err := simplejson.NewFromReader(albumsResponse.Body)
 	if err != nil {
-		log.Println(fmt.Errorf("GetAssociatedArtists - Album Request Error: %v", err))
+		log.Println(fmt.Errorf("GetAssociatedArtists Error - Read JSON: %v", err))
 		return nil
 	}
+	return sClient.parseAssociatedArtistsFromJson(albumsParser, artist.ID)
+}
 
-	albums, err := albumsParser.Get("albums").Array()
+func (sClient *SpotifyClient) parseAssociatedArtistsFromJson(parser *simplejson.Json, sourceID string) []model.Artist {
+	albums, err := parser.Get("albums").Array()
 	if err != nil {
 		log.Println(fmt.Errorf("GetAssociatedArtists - AlbumParser Error: %v", err))
 		return nil
@@ -95,32 +111,34 @@ func (sClient *SpotifyClient) getAssociatedArtists(artist model.Artist) []model.
 
 	associatedArtists := make([]model.Artist, 0)
 	for i := 0; i < len(albums); i++ {
-		tracksParser := albumsParser.Get("albums").GetIndex(i).Get("tracks")
-		tracks, err := tracksParser.Get("items").Array()
+		tracksParser := parser.Get("albums").GetIndex(i).Get("tracks").Get("items")
+		tracks, err := tracksParser.Array()
 		if err != nil {
 			log.Println(fmt.Errorf("GetAssociatedArtists - TrackParser Error: %v", err))
-			return nil
+			return associatedArtists
 		}
 		for j := 0; j < len(tracks); j++ {
-			trackJSON := tracksParser.Get("items").GetIndex(j)
-			trackData, err := trackJSON.Bytes()
+			trackData, err := tracksParser.GetIndex(j).Map()
+			trackBytes, err := json.Marshal(trackData)
 			if err != nil {
 				log.Println(fmt.Errorf("GetAssociatedArtists - TrackParser Error: %v", err))
-				return nil
+				return associatedArtists
 			}
 			track := model.Track{}
-			json.Unmarshal(trackData, track)
-			artistParser := tracksParser.Get("items").GetIndex(j).Get("artists")
+			json.Unmarshal(trackBytes, &track)
+			artistParser := tracksParser.GetIndex(j).Get("artists")
 			artists, err := artistParser.Array()
+			log.Println(len(artists))
 			for k := 0; k < len(artists); k++ {
-				performer, err := artistParser.GetIndex(k).Bytes()
+				artistData, err := artistParser.GetIndex(k).Map()
+				artistBytes, err := json.Marshal(artistData)
 				if err != nil {
 					log.Println(fmt.Errorf("GetAssociatedArtists - Artist Parser Error: %v", err))
-					return nil
+					return associatedArtists
 				}
 				associatedArtist := model.Artist{}
-				json.Unmarshal(performer, associatedArtist)
-				if associatedArtist.ID != artist.ID {
+				json.Unmarshal(artistBytes, &associatedArtist)
+				if associatedArtist.ID != sourceID {
 					associatedArtist.RelatedSong = &track
 					associatedArtists = append(associatedArtists, associatedArtist)
 				}
