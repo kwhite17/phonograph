@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <h1>Welcome to Phonograph!</h1>
+
+        <p>Phonograph is an application that determines the relationships between musical acts.
+            If two musical acts are related via one or more collaborations, Phonograph will display
+            the relationship with the fewest number of collaborations between the two artists.
+            Two musical acts have collaborated if they have appeared on the same song.
+        </p>
+        <br>
+        <div>            
+            Musical Act: <br>
+            <input type="text" id="artist"> <br>
+            <br>
+            Potential Collaborator: <br>
+            <input type="text" id="collaborator"> <br>
+            <br>
+            <button type="" onclick="determineRelationship()">Explore</button>
+        </div>
+    </body>
+    <script>
+        var determineRelationship = function() {
+            var artist = document.getElementById('artist');
+            var collaborator = document.getElementById('collaborator');
+            console.log("Determining relationship between", artist.value, "and", collaborator.value + "...");
+            artist.value="";
+            collaborator.value="";
+        }
+    </script>
+</html>
