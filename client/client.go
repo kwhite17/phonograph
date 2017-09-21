@@ -1,9 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/http/httputil"
 
 	"fmt"
 
@@ -16,25 +18,50 @@ type Client interface {
 }
 
 type SpotifyClient struct {
-	client   *http.Client
-	baseUrl  string
-	protocol string
-	auth     string
+	client            *http.Client
+	baseUrl           string
+	protocol          string
+	auth              string
+	discoveredArtists map[string]model.Node
 }
-
-//TODO: Get Dev Key for Spotify
 
 func InitSpotifyClient() *SpotifyClient {
-	return &SpotifyClient{client: &http.Client{}, baseUrl: "api.spotify.com/v1", protocol: "https"}
+	cli := &SpotifyClient{client: &http.Client{}, baseUrl: "api.spotify.com/v1", protocol: "https", discoveredArtists: make(map[string]model.Node)}
+	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", bytes.NewBufferString("grant_type=client_credentials"))
+	if err != nil {
+		reqBytes, _ := httputil.DumpRequestOut(req, true)
+		log.Println(fmt.Errorf("InitClient Error - Error:\n %v,\n Request:\n %q", err, reqBytes))
+		return cli
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.client.Do(req)
+	if err != nil || resp.StatusCode-200 >= 200 {
+		reqBytes, _ := httputil.DumpRequest(req, true)
+		respBytes, _ := httputil.DumpResponse(resp, true)
+		log.Println(fmt.Errorf("InitClient Error - Token: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
+		return cli
+	}
+	authObject, err := simplejson.NewFromReader(resp.Body)
+	auth, err := authObject.GetPath("access_token").String()
+	if err != nil {
+		log.Println(fmt.Errorf("InitClient Error - Parser: %v", err))
+		return cli
+	}
+	cli.auth = auth
+	return cli
 }
 
-//TODO: Extract Parser functionality into testable methods
-
 func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
-	endpoint := sClient.buildUrl("search", map[string]interface{}{"type": "artist", "q": "name"})
-	resp, err := sClient.client.Get(endpoint)
-	if err != nil {
-		log.Println(fmt.Errorf("GetArtist Error: %v", err))
+	log.Println(fmt.Sprintf("Service Call: %s", name))
+	req := sClient.buildRequest("search", map[string]interface{}{"type": "artist", "q": name})
+	if req == nil {
+		return model.Artist{}
+	}
+	resp, err := sClient.client.Do(req)
+	if err != nil || resp.StatusCode > 399 {
+		reqBytes, _ := httputil.DumpRequest(req, true)
+		respBytes, _ := httputil.DumpResponse(resp, true)
+		log.Println(fmt.Errorf("GetArtist Error: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
 		return model.Artist{}
 	}
 	parser, err := simplejson.NewFromReader(resp.Body)
@@ -43,6 +70,10 @@ func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 		return model.Artist{}
 	}
 	return sClient.parseArtistFromJson(parser)
+}
+
+func (sClient *SpotifyClient) AddToCache(id string, node model.Node) {
+	sClient.discoveredArtists[id] = node
 }
 
 func (sClient *SpotifyClient) parseArtistFromJson(parser *simplejson.Json) model.Artist {
@@ -63,13 +94,19 @@ func (sClient *SpotifyClient) parseArtistFromJson(parser *simplejson.Json) model
 }
 
 func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
-	albumEndpoint := sClient.buildUrl(fmt.Sprintf("artists/%s/albums", artist.ID), nil)
-	albumResponse, err := sClient.client.Get(albumEndpoint)
-	if err != nil {
-		log.Println(fmt.Errorf("GetAssociatedArtists Error - Album Request Error: %v", err))
+	log.Println(fmt.Sprintf("Service Call - Albums: %s", artist.Name))
+	req := sClient.buildRequest(fmt.Sprintf("artists/%s/albums", artist.ID), nil)
+	if req == nil {
 		return nil
 	}
-	parser, err := simplejson.NewFromReader(albumResponse.Body)
+	resp, err := sClient.client.Do(req)
+	if err != nil || resp.StatusCode-200 >= 200 {
+		reqBytes, _ := httputil.DumpRequest(req, true)
+		respBytes, _ := httputil.DumpResponse(resp, true)
+		log.Println(fmt.Errorf("InitClient Error - Token: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
+		return nil
+	}
+	parser, err := simplejson.NewFromReader(resp.Body)
 	if err != nil {
 		log.Println(fmt.Errorf("GetAssociatedArtists - Albums Request Error: %v", err))
 		return nil
@@ -84,17 +121,24 @@ func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
 }
 
 func (sClient *SpotifyClient) getAssociatedArtists(artist model.Artist) []model.Artist {
+	log.Println(fmt.Sprintf("Service Call - Associated Artists: %s", artist.Name))
 	albumIds := sClient.getArtistAlbums(artist)
-	albumsEndpoint := sClient.buildUrl("albums", map[string]interface{}{"ids": albumIds[0]})
+	albumString := albumIds[0]
 	for i := 1; i < len(albumIds); i++ {
-		albumsEndpoint = fmt.Sprintf("%s,%s", albumsEndpoint, albumIds[i])
+		albumString = fmt.Sprintf("%s,%s", albumString, albumIds[i])
 	}
-	albumsResponse, err := sClient.client.Get(albumsEndpoint)
-	if err != nil {
-		log.Println(fmt.Errorf("GetAssociatedArtists - Albums Request Error: %v", err))
+	req := sClient.buildRequest("albums", map[string]interface{}{"ids": albumString})
+	if req == nil {
 		return nil
 	}
-	albumsParser, err := simplejson.NewFromReader(albumsResponse.Body)
+	resp, err := sClient.client.Do(req)
+	if err != nil || resp.StatusCode-200 >= 200 {
+		reqBytes, _ := httputil.DumpRequest(req, true)
+		respBytes, _ := httputil.DumpResponse(resp, true)
+		log.Println(fmt.Errorf("GetAssociatedArtists - Albums Request Error: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
+		return nil
+	}
+	albumsParser, err := simplejson.NewFromReader(resp.Body)
 	if err != nil {
 		log.Println(fmt.Errorf("GetAssociatedArtists Error - Read JSON: %v", err))
 		return nil
@@ -128,7 +172,6 @@ func (sClient *SpotifyClient) parseAssociatedArtistsFromJson(parser *simplejson.
 			json.Unmarshal(trackBytes, &track)
 			artistParser := tracksParser.GetIndex(j).Get("artists")
 			artists, err := artistParser.Array()
-			log.Println(len(artists))
 			for k := 0; k < len(artists); k++ {
 				artistData, err := artistParser.GetIndex(k).Map()
 				artistBytes, err := json.Marshal(artistData)
@@ -164,12 +207,28 @@ func (sClient *SpotifyClient) buildUrl(endpoint string, params map[string]interf
 	return resource
 }
 
-func (sCli SpotifyClient) Expand(parent model.Node) []model.Node {
+func (sClient *SpotifyClient) buildRequest(endpoint string, params map[string]interface{}) *http.Request {
+	req, err := http.NewRequest("GET", sClient.buildUrl(endpoint, params), nil)
+	if err != nil {
+		log.Println(fmt.Errorf("BuildRequest - Error: %v", err))
+		return nil
+	}
+	req.Header.Add("Authorization", "Bearer "+sClient.auth)
+	return req
+}
+
+func (sClient *SpotifyClient) Expand(parent model.Node) []model.Node {
 	artist := parent.GetValue().(model.Artist)
-	associatedArtists := sCli.getAssociatedArtists(artist)
+	associatedArtists := sClient.getAssociatedArtists(artist)
 	result := make([]model.Node, len(associatedArtists))
 	for k, v := range associatedArtists {
-		result[k] = &model.ArtistNode{Value: v}
+		node, ok := sClient.discoveredArtists[v.ID]
+		if ok {
+			result[k] = node
+		} else {
+			result[k] = &model.ArtistNode{Value: v}
+			sClient.discoveredArtists[v.ID] = result[k]
+		}
 	}
 	return result
 }

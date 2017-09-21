@@ -2,25 +2,28 @@ package search
 
 import (
 	"container/list"
+	"fmt"
 
 	"github.com/kwhite17/phonograph/client"
 	"github.com/kwhite17/phonograph/model"
 )
 
-//TODO: MAKE GRAPHS A CLIENT INTERFACE THAT IMPLEMENTS EXPAND
-
-func BidirectionalBfs(source model.Node, dest model.Node, cli client.Client) *list.List {
-	resultChan := make(chan model.Node)
-	go bidirectionalBfsHelper(source, dest, resultChan, cli, true)
-	go bidirectionalBfsHelper(dest, source, resultChan, cli, false)
-	result := list.New()
-	for i := 0; i < 2; i++ {
-		commonNode := <-resultChan
-		switch commonNode {
-		case nil:
-			continue
-		default:
-			result = organizeResult(commonNode, source, dest)
+func BidirectionalBfs(source model.Node, dest model.Node, cli client.Client) []model.Node {
+	sourceChan := make(chan model.Node)
+	destChan := make(chan model.Node)
+	go bidirectionalBfsHelper(source, dest, sourceChan, cli, true)
+	go bidirectionalBfsHelper(dest, source, destChan, cli, false)
+	result := make([]model.Node, 0)
+	select {
+	case dResult := <-destChan:
+		if dResult != nil {
+			result = organizeResult(dResult, source, dest)
+			return result
+		}
+	case sResult := <-sourceChan:
+		if sResult != nil {
+			result = organizeResult(sResult, source, dest)
+			return result
 		}
 	}
 	return result
@@ -77,30 +80,32 @@ func bidirectionalBfsHelper(start model.Node, end model.Node, resultChan chan mo
 	resultChan <- nil
 }
 
-func organizeResult(commonNode model.Node, source model.Node, dest model.Node) *list.List {
-	finalList := list.New()
+func organizeResult(commonNode model.Node, source model.Node, dest model.Node) []model.Node {
+	finalList := make([]model.Node, 0)
 	if model.IsNil(commonNode) {
 		return finalList
 	}
 	curNode := commonNode
 	for !model.IsNil(curNode) {
-		finalList.PushFront(curNode)
+		fmt.Println(curNode)
+		finalList = append([]model.Node{curNode}, finalList...)
 		curNode = curNode.GetParent()
 	}
 	curNode = commonNode.GetChild()
 	for !model.IsNil(curNode) {
-		finalList.PushBack(curNode)
+		fmt.Println(curNode)
+		finalList = append(finalList, curNode)
 		curNode = curNode.GetChild()
 	}
 	return finalList
 }
 
-func bfs(source model.Node, dest model.Node, cli client.Client) *list.List {
-	result := list.New()
+func bfs(source model.Node, dest model.Node, cli client.Client) []model.Node {
+	result := make([]model.Node, 0)
 	if bfsHelper(source, dest, cli) {
 		cur := dest
 		for !model.IsNil(cur) {
-			result.PushFront(cur)
+			result = append([]model.Node{cur}, result...)
 			cur = cur.GetParent()
 		}
 	}

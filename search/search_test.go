@@ -45,8 +45,8 @@ func TestBasicSearch(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[1]
 	result := bfs(source, dest, graph)
-	if result.Len() != 2 {
-		t.Errorf("Expected result of length 2. Actual result length is %d", result.Len())
+	if len(result) != 2 {
+		t.Errorf("Expected result of length 2. Actual result length is %d", len(result))
 	}
 }
 
@@ -55,8 +55,8 @@ func TestGrandparentSearch(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[7]
 	result := bfs(source, dest, graph)
-	if result.Len() != 3 {
-		t.Errorf("Expected result of length 3. Actual result length is %d", result.Len())
+	if len(result) != 3 {
+		t.Errorf("Expected result of length 3. Actual result length is %d", len(result))
 	}
 }
 
@@ -65,8 +65,8 @@ func TestPathNotFound(t *testing.T) {
 	source := nodeList[10]
 	dest := nodeList[0]
 	result := bfs(source, dest, graph)
-	if result.Len() != 0 {
-		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
+	if len(result) != 0 {
+		t.Errorf("Expected result of length 0. Actual result length is %d", len(result))
 	}
 }
 
@@ -74,8 +74,8 @@ func TestNilSource(t *testing.T) {
 	defer teardown()
 	dest := nodeList[0]
 	result := bfs(nil, dest, graph)
-	if result.Len() != 0 {
-		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
+	if len(result) != 0 {
+		t.Errorf("Expected result of length 0. Actual result length is %d", len(result))
 	}
 }
 
@@ -83,8 +83,8 @@ func TestNilDestination(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
 	result := bfs(source, nil, graph)
-	if result.Len() != 0 {
-		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
+	if len(result) != 0 {
+		t.Errorf("Expected result of length 0. Actual result length is %d", len(result))
 	}
 }
 
@@ -93,8 +93,8 @@ func TestMultipleShortestPaths(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[11]
 	result := bfs(source, dest, graph)
-	if result.Len() != 5 {
-		t.Errorf("Expected result of length 5. Actual result length is %d", result.Len())
+	if len(result) != 5 {
+		t.Errorf("Expected result of length 5. Actual result length is %d", len(result))
 	}
 }
 
@@ -103,8 +103,8 @@ func TestBasicBidirectionalSearch(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[1]
 	result := BidirectionalBfs(source, dest, graph)
-	if result.Len() != 2 {
-		t.Errorf("Expected result of length 2. Actual result length is %d", result.Len())
+	if len(result) != 2 {
+		t.Errorf("Expected result of length 2. Actual result length is %d", len(result))
 	}
 }
 
@@ -113,8 +113,8 @@ func TestGrandparentBidirectionalSearch(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[7]
 	result := BidirectionalBfs(source, dest, graph)
-	if result.Len() != 3 {
-		t.Errorf("Expected result of length 3. Actual result length is %d", result.Len())
+	if len(result) != 3 {
+		t.Errorf("Expected result of length 3. Actual result length is %d", len(result))
 	}
 }
 
@@ -122,8 +122,8 @@ func TestBidirectionalNilSource(t *testing.T) {
 	defer teardown()
 	dest := nodeList[0]
 	result := BidirectionalBfs(nil, dest, graph)
-	if result.Len() != 0 {
-		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
+	if len(result) != 0 {
+		t.Errorf("Expected result of length 0. Actual result length is %d", len(result))
 	}
 }
 
@@ -131,8 +131,8 @@ func TestBidirectionalNilDestination(t *testing.T) {
 	defer teardown()
 	source := nodeList[0]
 	result := BidirectionalBfs(source, nil, graph)
-	if result.Len() != 0 {
-		t.Errorf("Expected result of length 0. Actual result length is %d", result.Len())
+	if len(result) != 0 {
+		t.Errorf("Expected result of length 0. Actual result length is %d", len(result))
 	}
 }
 
@@ -141,7 +141,7 @@ func TestBidirectionalMultipleShortestPaths(t *testing.T) {
 	source := nodeList[0]
 	dest := nodeList[11]
 	result := BidirectionalBfs(source, dest, graph)
-	if result.Len() != 5 {
-		t.Errorf("Expected result of length 5. Actual result length is %d", result.Len())
+	if len(result) != 5 {
+		t.Errorf("Expected result of length 5. Actual result length is %d", len(result))
 	}
 }

@@ -29,6 +29,21 @@
             var artist = document.getElementById('artist');
             var collaborator = document.getElementById('collaborator');
             console.log("Determining relationship between", artist.value, "and", collaborator.value + "...");
+            var request = new XMLHttpRequest();
+            request.open('GET', '/search?artist='.concat(encodeURIComponent(artist.value), '&collaborator=', encodeURIComponent(collaborator.value)));
+            request.onreadystatechange = function() {
+                if (request.readyState === XMLHttpRequest.DONE) {
+                    switch (request.status) {
+                        case 200:
+                            console.log(request.response);
+                            break;
+                        default:
+                            console.log("to failure!")
+                            console.log(request.response);
+                    }
+                }
+            }
+            request.send();
             artist.value="";
             collaborator.value="";
         }
