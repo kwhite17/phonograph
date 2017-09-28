@@ -23,6 +23,9 @@
             <br>
             <button type="" onclick="determineRelationship()">Explore</button>
         </div>
+        <div id="resultDiv">
+
+        </div>
     </body>
     <script>
         var determineRelationship = function() {
@@ -35,7 +38,18 @@
                 if (request.readyState === XMLHttpRequest.DONE) {
                     switch (request.status) {
                         case 200:
-                            console.log(request.response);
+                            var response = JSON.parse(request.response);
+                            console.log(response);
+                            var resultMarkup = "<ol>";
+                            for (var i = 0; i < response.length; i++){
+                                resultMarkup = resultMarkup.concat("<li>", response[i].name);
+                                if (i !== 0 && i != response.length - 1) {
+                                    resultMarkup = resultMarkup.concat(": ", response[i].RelatedSong.name);
+                                }
+                                resultMarkup = resultMarkup.concat("</li>");
+                            }
+                            resultMarkup = resultMarkup.concat("</ol>");
+                            document.getElementById('resultDiv').innerHTML = resultMarkup;
                             break;
                         default:
                             console.log("to failure!")

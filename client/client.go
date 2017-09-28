@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"os"
 
 	"fmt"
 
@@ -34,6 +35,7 @@ func InitSpotifyClient() *SpotifyClient {
 		return cli
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"))
 	resp, err := cli.client.Do(req)
 	if err != nil || resp.StatusCode-200 >= 200 {
 		reqBytes, _ := httputil.DumpRequest(req, true)
