@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strconv"
+	"time"
 
 	"fmt"
 
@@ -55,15 +57,8 @@ func InitSpotifyClient() *SpotifyClient {
 
 func (sClient *SpotifyClient) FindArtist(name string) model.Artist {
 	log.Println(fmt.Sprintf("Service Call: %s", name))
-	req := sClient.buildRequest("search", map[string]interface{}{"type": "artist", "q": name})
-	if req == nil {
-		return model.Artist{}
-	}
-	resp, err := sClient.client.Do(req)
-	if err != nil || resp.StatusCode > 399 {
-		reqBytes, _ := httputil.DumpRequest(req, true)
-		respBytes, _ := httputil.DumpResponse(resp, true)
-		log.Println(fmt.Errorf("GetArtist Error: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
+	resp, err := sClient.sendRequest("search", map[string]interface{}{"type": "artist", "q": name})
+	if err != nil || resp.StatusCode-200 >= 200 {
 		return model.Artist{}
 	}
 	parser, err := simplejson.NewFromReader(resp.Body)
@@ -97,15 +92,8 @@ func (sClient *SpotifyClient) parseArtistFromJson(parser *simplejson.Json) model
 
 func (sClient *SpotifyClient) getArtistAlbums(artist model.Artist) []string {
 	log.Println(fmt.Sprintf("Service Call - Albums: %s", artist.Name))
-	req := sClient.buildRequest(fmt.Sprintf("artists/%s/albums", artist.ID), nil)
-	if req == nil {
-		return nil
-	}
-	resp, err := sClient.client.Do(req)
+	resp, err := sClient.sendRequest(fmt.Sprintf("artists/%s/albums", artist.ID), nil)
 	if err != nil || resp.StatusCode-200 >= 200 {
-		reqBytes, _ := httputil.DumpRequest(req, true)
-		respBytes, _ := httputil.DumpResponse(resp, true)
-		log.Println(fmt.Errorf("InitClient Error - Token: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
 		return nil
 	}
 	parser, err := simplejson.NewFromReader(resp.Body)
@@ -129,15 +117,8 @@ func (sClient *SpotifyClient) getAssociatedArtists(artist model.Artist) []model.
 	for i := 1; i < len(albumIds); i++ {
 		albumString = fmt.Sprintf("%s,%s", albumString, albumIds[i])
 	}
-	req := sClient.buildRequest("albums", map[string]interface{}{"ids": albumString})
-	if req == nil {
-		return nil
-	}
-	resp, err := sClient.client.Do(req)
+	resp, err := sClient.sendRequest("albums", map[string]interface{}{"ids": albumString})
 	if err != nil || resp.StatusCode-200 >= 200 {
-		reqBytes, _ := httputil.DumpRequest(req, true)
-		respBytes, _ := httputil.DumpResponse(resp, true)
-		log.Println(fmt.Errorf("GetAssociatedArtists - Albums Request Error: %v,\n Request: %q,\n Response: %q", err, reqBytes, respBytes))
 		return nil
 	}
 	albumsParser, err := simplejson.NewFromReader(resp.Body)
@@ -191,6 +172,24 @@ func (sClient *SpotifyClient) parseAssociatedArtistsFromJson(parser *simplejson.
 		}
 	}
 	return associatedArtists
+}
+
+func (sClient *SpotifyClient) sendRequest(path string, params map[string]interface{}) (*http.Response, error) {
+	req := sClient.buildRequest(path, params)
+	if req == nil {
+		return nil, fmt.Errorf("Failed to build request")
+	}
+	resp, err := sClient.client.Do(req)
+	if resp.StatusCode == 429 {
+		waitTime, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		time.Sleep(time.Second * time.Duration(waitTime))
+		return sClient.sendRequest(path, params)
+	} else if err != nil || resp.StatusCode-200 >= 200 {
+		reqBytes, _ := httputil.DumpRequestOut(req, true)
+		respBytes, _ := httputil.DumpResponse(resp, true)
+		log.Println(fmt.Errorf("%s Error: %v,\n Request: %q,\n Response: %q", path, err, reqBytes, respBytes))
+	}
+	return resp, err
 }
 
 func (sClient *SpotifyClient) buildUrl(endpoint string, params map[string]interface{}) string {
